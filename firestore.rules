@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "jhhh47943@gmail.com" ||
+        request.auth.uid == "admin-abhijit" ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entities ---
+
+    // User Profile
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.displayName is string && data.displayName.size() <= 200 &&
+             data.points is number &&
+             (!('username' in data) || (data.username is string && data.username.size() <= 100)) &&
+             (!('password' in data) || (data.password is string && data.password.size() <= 100)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+             (!('geminiApiKey' in data) || (data.geminiApiKey is string && data.geminiApiKey.size() <= 500)) &&
+             (!('quizMathApiKey' in data) || (data.quizMathApiKey is string && data.quizMathApiKey.size() <= 500)) &&
+             (!('onboardingReason' in data) || (data.onboardingReason is string && data.onboardingReason.size() <= 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2000)) &&
+             (!('selectedCharacter' in data) || (data.selectedCharacter is string && data.selectedCharacter.size() <= 50)) &&
+             (!('voiceStyle' in data) || (data.voiceStyle is string && data.voiceStyle.size() <= 50)) &&
+             (!('preferredQuizModel' in data) || (data.preferredQuizModel is string && data.preferredQuizModel.size() <= 100)) &&
+             (!('preferredMathModel' in data) || (data.preferredMathModel is string && data.preferredMathModel.size() <= 100)) &&
+             (!('isMuted' in data) || data.isMuted is bool) &&
+             (!('isAnonymous' in data) || data.isAnonymous is bool) &&
+             (!('streak' in data) || data.streak is number) &&
+             (!('premiumUnlocked' in data) || data.premiumUnlocked is bool) &&
+             (!('lastActive' in data) || data.lastActive is string) &&
+             (!('status' in data) || (data.status is string && data.status.size() <= 50)) &&
+             (!('aiMemories' in data) || data.aiMemories is list) &&
+             (!('isAdmin' in data) || data.isAdmin is bool);
+    }
+
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isSignedIn() && isOwner(userId) && isValidUser(request.resource.data)) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Resources (Shared)
+    function isValidResource(data) {
+      return data.title is string && data.title.size() <= 200 &&
+             data.type is string && data.type.size() <= 50 &&
+             data.date is string &&
+             (!('url' in data) || (data.url is string && data.url.size() <= 2000)) &&
+             (!('fileData' in data) || (data.fileData is string && data.fileData.size() <= 1500000)) &&
+             (!('fileName' in data) || (data.fileName is string && data.fileName.size() <= 200)) &&
+             (!('fileSize' in data) || data.fileSize is number) &&
+             (!('addedBy' in data) || (data.addedBy is string && data.addedBy.size() <= 128));
+    }
+
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidResource(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin(); 
+    }
+
+    // Actions (Live Feed)
+    function isValidAction(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.text is string && data.text.size() <= 200 &&
+             data.timestamp is string;
+    }
+
+    match /actions/{actionId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidAction(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Announcements Notice Bulletin
+    function isValidAnnouncement(data) {
+      return data.text is string && data.text.size() <= 1000 &&
+             (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+             (!('timestamp' in data) || data.timestamp is string) &&
+             (!('author' in data) || (data.author is string && data.author.size() <= 100));
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidAnnouncement(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

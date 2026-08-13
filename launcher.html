@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mentor Launcher</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .error { color: white; text-align: center; padding: 50px; display: none; }
+    </style>
+</head>
+<body>
+    <div id="error" class="error">
+        <h1>App URL not found</h1>
+        <p>Please open this file from within the AI Mentor app to generate a working launcher.</p>
+    </div>
+    <iframe id="appFrame" src="" allow="camera; microphone; geolocation;"></iframe>
+
+    <script>
+        // This is a template. The app will replace the src with the actual URL when downloaded from settings.
+        const appUrl = "https://ais-dev-hmckbstuzc3hcwhwqm7ckc-181332496386.asia-southeast1.run.app"; 
+        if (appUrl) {
+            document.getElementById('appFrame').src = appUrl;
+        } else {
+            document.getElementById('error').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

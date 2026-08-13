@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Study Stranger</string>
+    <string name="title_activity_main">Study Stranger</string>
+    <string name="package_name">com.studystranger.app</string>
+    <string name="custom_url_scheme">com.studystranger.app</string>
+</resources>
